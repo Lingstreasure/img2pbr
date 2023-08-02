@@ -1,0 +1,12 @@
+_target_: src.data.pbr_datamodule.PBRDataModule
+cfg_train:
+  _target_: src.data.components.pbr_dataset.PBROvercastHdrRenderDataset
+  data_root_dir: /media/d5/7D1922F98D178B12/dw/mat_reorg
+  data_list_file_dir: /home/d5/hz/Code/sdmat/data_file
+  subdataset_names: ['3dtextures', 'ambient', 'polyhaven', 'sharetextures']
+  pbr_dir_names: ['3dtextures_cleanup_nometal', 'ambient_cleanup_nometal', 
+                  'polyhaven_cleanup', 'sharetextures_cleanup_nometal']
+  rendered_dir_names: ['3dtextures_renderout_blender', 'ambient_renderout_blender', 
+                       'polyhaven_renderout_blender', 'sharetextures_renderout_blender']
+  debug_on: True
+  debug_data_num: 200
