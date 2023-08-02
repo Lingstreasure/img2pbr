@@ -6,7 +6,7 @@ from lightning import LightningDataModule
 from omegaconf import DictConfig
 
 class PBRDataModule(LightningDataModule):
-    """
+    """A universal `LightningDataModule` for PBR dataset.
     ```python
         def prepare_data(self):
         # Things to do on 1 GPU/TPU (not on every GPU/TPU in DDP).
