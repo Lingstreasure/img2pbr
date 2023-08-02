@@ -39,9 +39,9 @@ class PBRDataModule(LightningDataModule):
         batch_size: int, 
         num_workers: int = 0,
         pin_memory: bool = False,
-        train: DictConfig = None, 
-        validation: DictConfig = None,
-        test: DictConfig = None,
+        cfg_train: DictConfig = None, 
+        cfg_val: DictConfig = None,
+        cfg_test: DictConfig = None,
     ) -> None:
         """Initialize a `PBRDataModule`.
         
@@ -84,9 +84,9 @@ class PBRDataModule(LightningDataModule):
         :param stage: The stage to setup. Either `"fit"`, `"validate"`, `"test"`, or `"predict"`. Defaults to ``None``.
         """
         # load dataset
-        self.data_train = hydra.utils.instantiate(self.hparams.train)
-        self.data_val = hydra.utils.instantiate(self.hparams.val)
-        self.data_test = hydra.utils.instantiate(self.hparams.test)
+        self.data_train = hydra.utils.instantiate(self.hparams.cfg_train)
+        self.data_val = hydra.utils.instantiate(self.hparams.cfg_val)
+        self.data_test = hydra.utils.instantiate(self.hparams.cfg_test)
         
     def train_dataloader(self) -> DataLoader[Any]:
         """Create and return the train dataloader.
