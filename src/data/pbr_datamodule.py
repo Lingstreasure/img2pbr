@@ -48,9 +48,9 @@ class PBRDataModule(LightningDataModule):
         :param batch_size: The batch size.
         :param num_workers: The number of workers. Defaults to `0`.
         :param pin_memory: Whether to pin memory. Defaults to `False`.
-        :param train: The config of train dataset. Defaults to `None`.
-        :param validation: The config of validation dataset. Defaults to `None`.
-        :param test: The config of of test dataset. Defaults to `None`.
+        :param cfg_train: The config of train dataset. Defaults to `None`.
+        :param cfg_val: The config of validation dataset. Defaults to `None`.
+        :param cfg_test: The config of of test dataset. Defaults to `None`.
         """
         super().__init__()
         
