@@ -96,7 +96,7 @@ class PBRDataModule(LightningDataModule):
         return DataLoader(
             dataset=self.data_train,
             batch_size=self.hparams.batch_size,
-            num_workers=self.hparams.num_workders,
+            num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             shuffle=True,
         )
@@ -109,7 +109,7 @@ class PBRDataModule(LightningDataModule):
         return DataLoader(
             dataset=self.data_val,
             batch_size=self.hparams.batch_size,
-            num_workers=self.hparams.num_workders,
+            num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             shuffle=False,
         )
@@ -122,7 +122,7 @@ class PBRDataModule(LightningDataModule):
         return DataLoader(
             dataset=self.data_test,
             batch_size=self.hparams.batch_size,
-            num_workers=self.hparams.num_workders,
+            num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             shuffle=False,
         )
