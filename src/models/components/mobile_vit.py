@@ -9,5 +9,5 @@ class MobileVit(nn.Module):
         super().__init__(*args, **kwargs)
         pass
         
-    def forward(self, x) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         pass

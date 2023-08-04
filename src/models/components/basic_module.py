@@ -48,7 +48,7 @@ class ConvBlock(nn.Module):
                                stride=1)
         self.skip_norm = Normalize(out_channels, num_groups=16)
         
-    def forward(self, x) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         h = x
         h = self.conv1(h)
         h = self.norm1(h)
@@ -92,7 +92,7 @@ class MLP(nn.Module):
                                   kernel_size=1,
                                   stride=1)
         
-    def forward(self, x) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv_in(x)
         x = self.norm(x)
         x = self.dropout(x)
@@ -131,13 +131,18 @@ class MLP(nn.Module):
 #         self.to_qkv = nn.Conv2d(in_channels, inner_dim * 3, 1, bias = False)
 #         self.to_out = nn.Conv2d(inner_dim, in_channels, 1)
         
-#     def forward(self, x) -> torch.Tensor:
+#     def forward(self, x: torch.Tensor) -> torch.Tensor:
 #         b, c, h, w = x.shape
 #         qkv = self.to_qkv(x)  # b c h w -> b (3 * h * d) h w
 #         q, k, v = rearrange(qkv, 'b (qkv heads c) h w -> qkv b heads c (h w)', heads = self.heads, qkv=3)
         
 
 class LinearAttention(nn.Module):
+    """A self attention module with linear complexity.
+    
+    This implementation is from openaimodel.py in SD.
+    """
+    
     def __init__(self, dim, heads=4, dim_head=32):
         super().__init__()
         self.heads = heads
@@ -145,7 +150,7 @@ class LinearAttention(nn.Module):
         self.to_qkv = nn.Conv2d(dim, hidden_dim * 3, 1, bias = False)
         self.to_out = nn.Conv2d(hidden_dim, dim, 1)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         b, c, h, w = x.shape
         qkv = self.to_qkv(x)
         q, k, v = rearrange(qkv, 'b (qkv heads c) h w -> qkv b heads c (h w)', heads = self.heads, qkv=3)

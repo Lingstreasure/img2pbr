@@ -83,7 +83,7 @@ class UNetModel(nn.Module):
         else:
             self.out = ConvBlock(in_channels=fea_channels[0] // 2, out_channels=out_channels)
         
-    def forward(self, x) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         hs = []
         h = x.type(self.dtype)
         for module in self.input_blocks:

@@ -86,7 +86,7 @@ class UNetMultiDecoderModel(nn.Module):
         else:
             self.middle_block = ConvBlock(in_channels, in_channels)
         
-    def forward(self, x) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         hs = []
         h = x.type(self.dtype)
         
