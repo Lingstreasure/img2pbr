@@ -159,7 +159,7 @@ class PBROvercastHdrRenderDataset(Dataset):
         name, input, gt = self._data[index]
         input = self._img_process(input)
         gt = self._img_process(gt)
-        return {"name": name, "input": input, "gt": gt}
+        return (name, input, gt)
     
 
 if __name__ == "__main__":
