@@ -84,9 +84,12 @@ class PBRDataModule(LightningDataModule):
         :param stage: The stage to setup. Either `"fit"`, `"validate"`, `"test"`, or `"predict"`. Defaults to ``None``.
         """
         # load dataset
-        self.data_train = hydra.utils.instantiate(self.hparams.cfg_train)
-        self.data_val = hydra.utils.instantiate(self.hparams.cfg_val)
-        self.data_test = hydra.utils.instantiate(self.hparams.cfg_test)
+        if stage == 'fit' or stage == None:
+            self.data_train = hydra.utils.instantiate(self.hparams.cfg_train)
+            self.data_val = hydra.utils.instantiate(self.hparams.cfg_val)
+        
+        if stage == 'test':
+            self.data_test = hydra.utils.instantiate(self.hparams.cfg_test)
         
     def train_dataloader(self) -> DataLoader[Any]:
         """Create and return the train dataloader.
