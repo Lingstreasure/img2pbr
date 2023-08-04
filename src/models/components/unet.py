@@ -1,6 +1,5 @@
 from typing import List, Tuple, Union, Sequence
-import sys
-sys.path.append('.')
+
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -9,11 +8,13 @@ from src.models.components.basic_module import ConvBlock, MLP, LinearAttention
 from src.models.components.mobile_vit import MobileVit
 
 class UNetModel(nn.Module):
-    """A full UNet model with linear attention and MobileViT. """
+    """A modified UNet model with linear attention and MobileViT. """
     
     def __init__(
         self, 
         in_channels: int = 3,
+        out_channels: int = 3,
+        model_channels: int = 32, 
         num_conv_blocks: Union[int, Sequence[int]] = 1,
         channel_mult: Sequence[int] = (1, 1, 1, 1),
         use_self_attention: bool = True,
@@ -23,7 +24,17 @@ class UNetModel(nn.Module):
         *args, 
         **kwargs
     ) -> None:
-        """
+        """Initialize a `UNetModel`.
+        
+        :param in_channels: Channels in the input Tensor. Default to `3`.
+        :param out_channels: Channels in the output Tensor. Default to `3`.
+        :param model_channels: Base channel count for the model
+        :param num_conv_blocks: Number of conv blocks(residual blocks) per downsample.
+        :param channel_mult: Channel multiplier for each level of the UNet. Default to `(1, 1, 1, 1)`.
+        :param use_self_attention: Whether to add linear self attention after conv blocks. Default to `True`.
+        :param use_ViT_bottleneck: Whether to use MobileViT at bottleneck. Default to `True`.
+        :param use_MLP_out: Whether to use MLP as the output layer. Default to `True`.
+        :param use_fp16: Whether to use fp16 with mixed precision (not implemented). Default to `False`.
         """
         super().__init__(*args, **kwargs)
         
@@ -68,9 +79,9 @@ class UNetModel(nn.Module):
             self.middle_block = ConvBlock(in_channels, in_channels)
         
         if use_MLP_out:
-            self.out = MLP(in_channels=fea_channels[0] // 2, out_channels=3)
+            self.out = MLP(in_channels=fea_channels[0] // 2, out_channels=out_channels)
         else:
-            self.out = ConvBlock(in_channels=fea_channels[0] // 2, out_channels=3)
+            self.out = ConvBlock(in_channels=fea_channels[0] // 2, out_channels=out_channels)
         
     def forward(self, x) -> torch.Tensor:
         hs = []
