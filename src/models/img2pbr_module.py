@@ -43,8 +43,6 @@ class IMG2PBRLitModule(LightningModule):
         loss: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler,
-        *args: Any, 
-        **kwargs: Any
     ) -> None:
         """Initialize a `IMG2PBRLitModule`.
         
@@ -53,7 +51,7 @@ class IMG2PBRLitModule(LightningModule):
         :param optimizer: The optimizer to use for training.
         :param scheduler: The learning rate scheduler to use for training.
         """
-        super().__init__(*args, **kwargs)
+        super().__init__()
         
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt

@@ -1,5 +1,6 @@
 from typing import List, Tuple, Union, Sequence
-
+import sys
+sys.path.append("/media/d5/7D1922F98D178B12/hz/Code/img2pbr")
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -13,16 +14,14 @@ class UNetMultiDecoderModel(nn.Module):
     def __init__(
         self, 
         in_channels: int = 3,
-        out_channels: Sequence[int] = (3, 3, 1),
+        out_channels: Sequence[int] = (3, 3, 1, 1),
         model_channels: int = 32, 
         num_conv_blocks: Union[int, Sequence[int]] = 1,
         channel_mult: Sequence[int] = (1, 1, 1, 1),
-        use_self_attention: bool = True,
-        use_ViT_bottleneck: bool = True,
-        use_MLP_out: bool = True,
+        use_self_attention: bool = False,
+        use_ViT_bottleneck: bool = False,
+        use_MLP_out: bool = False,
         use_fp16: bool = False,
-        *args, 
-        **kwargs
     ) -> None:
         """Initialize a `UNetMultiDecoderModel`.
         
@@ -36,7 +35,7 @@ class UNetMultiDecoderModel(nn.Module):
         :param use_MLP_out: Whether to use MLP as the output layer. Default to `True`.
         :param use_fp16: Whether to use fp16 with mixed precision (not implemented). Default to `False`.
         """
-        super().__init__(*args, **kwargs)
+        super().__init__()
         
         if isinstance(num_conv_blocks, int):
             self.num_conv_blocks = len(channel_mult) * [num_conv_blocks]
@@ -67,24 +66,27 @@ class UNetMultiDecoderModel(nn.Module):
             layers.clear()
             in_channels = ch
 
+        # bottleneck module
+        if use_ViT_bottleneck:
+            self.middle_block = MobileVit()
+        else:
+            self.middle_block = ConvBlock(in_channels, in_channels)
+
+        # multi decoders
         for out_ch in out_channels:
+            # out module of Model
             if use_MLP_out:
                 self.outs.append(MLP(in_channels=fea_channels[0] // 2, out_channels=out_ch))
             else:
                 self.outs.append(ConvBlock(in_channels=fea_channels[0] // 2, out_channels=out_ch))
             
+            # upsampling
             self.output_blocks.append(nn.ModuleList())
             for ch in reversed(fea_channels):
                 layers.append(nn.ConvTranspose2d(in_channels=ch, out_channels=ch // 2, kernel_size=2, stride=2))
                 layers.append(ConvBlock(in_channels=ch, out_channels=ch // 2))
                 self.output_blocks[-1].append(nn.ModuleList(layers)) 
                 layers.clear()
-                
- 
-        if use_ViT_bottleneck:
-            self.middle_block = MobileVit()
-        else:
-            self.middle_block = ConvBlock(in_channels, in_channels)
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         hs = []
@@ -105,14 +107,14 @@ class UNetMultiDecoderModel(nn.Module):
         hs.reverse()
         
         # multi decoders
-        outs = [h, h, h]
+        outs = [h] * len(self.outs)
         for idx, decoder in enumerate(self.output_blocks):
             for level, modules in enumerate(decoder):
                 outs[idx] = modules[1](torch.cat([modules[0](outs[idx]), hs[level]], dim=1))
                 
             outs[idx] = self.outs[idx](outs[idx]).type(x.dtype)
             
-        return outs
+        return torch.concat(outs, dim=1)
     
     
 if __name__ == "__main__":
@@ -128,7 +130,6 @@ if __name__ == "__main__":
     print(cnt, '\t', "{:.2f}".format(cnt / 1000000), 'M')
     imgs = torch.randn((4, 3, 512, 512))
     outs = model(imgs)
-    for out in outs:
-        print(out.shape)
+    print(outs.shape)
 
     
