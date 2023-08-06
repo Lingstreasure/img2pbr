@@ -39,18 +39,18 @@ class PBRDataModule(LightningDataModule):
         batch_size: int, 
         num_workers: int = 0,
         pin_memory: bool = False,
-        cfg_train: DictConfig = None, 
-        cfg_val: DictConfig = None,
-        cfg_test: DictConfig = None,
+        data_train: Dataset = None, 
+        data_val: Dataset = None,
+        data_test: Dataset = None,
     ) -> None:
         """Initialize a `PBRDataModule`.
         
         :param batch_size: The batch size.
         :param num_workers: The number of workers. Defaults to `0`.
         :param pin_memory: Whether to pin memory. Defaults to `False`.
-        :param cfg_train: The config of train dataset. Defaults to `None`.
-        :param cfg_val: The config of validation dataset. Defaults to `None`.
-        :param cfg_test: The config of of test dataset. Defaults to `None`.
+        :param data_train: The train dataset. Defaults to `None`.
+        :param data_val: The validation dataset. Defaults to `None`.
+        :param data_test: The test dataset. Defaults to `None`.
         """
         super().__init__()
         
@@ -85,11 +85,11 @@ class PBRDataModule(LightningDataModule):
         """
         # load dataset
         if stage == 'fit' or stage == None:
-            self.data_train = hydra.utils.instantiate(self.hparams.cfg_train)
-            self.data_val = hydra.utils.instantiate(self.hparams.cfg_val)
+            self.data_train = self.hparams.data_train() 
+            self.data_val = self.hparams.data_val() if self.hparams.data_val else None
         
         if stage == 'test':
-            self.data_test = hydra.utils.instantiate(self.hparams.cfg_test)
+            self.data_test = self.hparams.data_test() if self.hparams.data_test else None
         
     def train_dataloader(self) -> DataLoader[Any]:
         """Create and return the train dataloader.

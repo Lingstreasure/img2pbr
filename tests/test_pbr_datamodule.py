@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 import torch
+import hydra
 
 from omegaconf import DictConfig, OmegaConf
 from src.data.pbr_datamodule import PBRDataModule
@@ -17,27 +18,26 @@ def test_mnist_datamodule(batch_size: int) -> None:
     """
 
     cfg = OmegaConf.load("configs/data/test_pbr_datamodule.yaml")
-    dm = PBRDataModule(batch_size=batch_size, 
-                       cfg_train=cfg.cfg_train)
+    dm = hydra.utils.instantiate(cfg, batch_size=batch_size)
     dm.prepare_data()
 
     assert not dm.data_train
-    assert Path(cfg.cfg_train.data_root_dir).exists()
-    assert Path(cfg.cfg_train.data_list_file_dir).exists()
-    for name in cfg.cfg_train.pbr_dir_names:
-        assert Path(cfg.cfg_train.data_root_dir, name).exists()
-    for name in cfg.cfg_train.rendered_dir_names:
-        assert Path(cfg.cfg_train.data_root_dir, name).exists()
+    assert Path(cfg.data_train.data_root_dir).exists()
+    assert Path(cfg.data_train.data_list_file_dir).exists()
+    for name in cfg.data_train.pbr_dir_names:
+        assert Path(cfg.data_train.data_root_dir, name).exists()
+    for name in cfg.data_train.rendered_dir_names:
+        assert Path(cfg.data_train.data_root_dir, name).exists()
 
     dm.setup()
     assert dm.data_train
-    assert dm.train_dataloader()
+    assert isinstance(dm.train_dataloader(), torch.utils.data.DataLoader)
 
     num_datapoints = len(dm.data_train)
     assert num_datapoints == 200
 
     batch = next(iter(dm.train_dataloader()))
-    _, input, gt = batch.values()
+    _, input, gt = batch
     assert len(input) == batch_size
     assert len(gt) == batch_size
     assert input.shape == (batch_size, 3, 512, 512)
