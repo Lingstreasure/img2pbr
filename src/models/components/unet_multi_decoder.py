@@ -1,6 +1,5 @@
 from typing import List, Tuple, Union, Sequence
-import sys
-sys.path.append("/media/d5/7D1922F98D178B12/hz/Code/img2pbr")
+
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -78,7 +77,7 @@ class UNetMultiDecoderModel(nn.Module):
             if use_MLP_out:
                 self.outs.append(MLP(in_channels=fea_channels[0] // 2, out_channels=out_ch))
             else:
-                self.outs.append(ConvBlock(in_channels=fea_channels[0] // 2, out_channels=out_ch))
+                self.outs.append(nn.Conv2d(in_channels=fea_channels[0] // 2, out_channels=out_ch, kernel_size=1))
             
             # upsampling
             self.output_blocks.append(nn.ModuleList())
@@ -114,16 +113,16 @@ class UNetMultiDecoderModel(nn.Module):
                 
             outs[idx] = self.outs[idx](outs[idx]).type(x.dtype)
             
-        return torch.concat(outs, dim=1)
+        return torch.tanh(torch.concat(outs, dim=1))
     
     
 if __name__ == "__main__":
     model = UNetMultiDecoderModel(in_channels=3,
                                 num_conv_blocks=1,
                                 channel_mult=(1, 1, 1, 1),
-                                use_self_attention=True,
+                                use_self_attention=False,
                                 use_ViT_bottleneck=False,
-                                use_MLP_out=True,
+                                use_MLP_out=False,
                                 use_fp16=False)
     print(model)
     cnt = sum(p.numel() for p in model.parameters())
