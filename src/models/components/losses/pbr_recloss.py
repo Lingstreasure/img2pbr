@@ -5,6 +5,7 @@ from torch import nn
 
 from src.models.components.losses.lpips import LPIPS
 
+
 class PBRReconstructionLoss(nn.Module):
     """The PBR maps reconstruction losses module.
     
@@ -83,6 +84,5 @@ class PBRReconstructionLoss(nn.Module):
 
         # total loss
         loss = rec_loss + random_per_loss + render_loss + p_loss
-        log["total_loss"] = loss.clone().detach()
 
         return loss, log
