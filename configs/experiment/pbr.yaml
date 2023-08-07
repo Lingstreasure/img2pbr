@@ -1,0 +1,38 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=pbr
+
+defaults:
+  - override /data: pbr
+  - override /model: pbr
+  - override /callbacks: pbr
+  - override /trainer: pbr
+  - override /logger: tensorboard
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["pbr", "unet_multi_decoder"]
+task_name: "pbr_reconstruction"
+test: False
+compile: False
+seed: 42
+
+trainer:
+  min_epochs: 1
+  max_epochs: 100
+  benchmark: True
+  check_val_every_n_epoch: 1
+
+model:
+  optimizer:
+    lr: 1.e-3
+  model:
+    use_self_attention: False
+    use_ViT_bottleneck: False
+    use_MLP_out: False
+    use_fp16: False
+
+data:
+  batch_size: 16

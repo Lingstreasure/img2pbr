@@ -1,0 +1,29 @@
+defaults:
+  - model_checkpoint
+  - model_summary
+  - rich_progress_bar
+  - _self_  # this can override configs above
+
+model_checkpoint:
+  dirpath: ${paths.output_dir}/checkpoints
+  filename: "epoch_{epoch:03d}"
+  monitor: "val/rec_loss"
+  mode: "min"
+  save_last: True
+  save_top_k: 1
+  auto_insert_metric_name: False
+  save_weights_only: True
+
+model_summary:
+  max_depth: -1
+
+image_logger:
+  _target_: src.callbacks.img_logger.ImageLogger
+  check_batch_idx: 10
+  max_images: 4
+  clamp: True
+  log_first_step: True
+
+lr_logger:
+  _target_: lightning.pytorch.callbacks.LearningRateMonitor
+  logging_interval: epoch
