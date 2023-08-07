@@ -55,7 +55,7 @@ class IMG2PBRLitModule(LightningModule):
         
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
-        self.save_hyperparameters(logger=False)
+        self.save_hyperparameters(logger=False, ignore=['model', 'loss'])
         
         # model
         self.model = model
@@ -64,8 +64,8 @@ class IMG2PBRLitModule(LightningModule):
         self.loss = loss
         
         # metrics
-        self.lpips = LearnedPerceptualImagePatchSimilarity()
-        self.ssim = StructuralSimilarityIndexMeasure()
+        # self.lpips = LearnedPerceptualImagePatchSimilarity()
+        # self.ssim = StructuralSimilarityIndexMeasure()
         self.rmse = RootMeanSquaredErrorUsingSlidingWindow()
         
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor]:
@@ -80,8 +80,8 @@ class IMG2PBRLitModule(LightningModule):
         """Lightning hook that is called when training begins."""
         # by default lightning executes validation step sanity checks before training starts,
         # so it's worth to make sure validation metrics don't store results from these checks
-        self.lpips.reset()
-        self.ssim.reset()
+        # self.lpips.reset()
+        # self.ssim.reset()
         self.rmse.reset()
         
     def model_step(
@@ -95,7 +95,7 @@ class IMG2PBRLitModule(LightningModule):
             - A tensor of losses.
             - A tensor of predictions.
         """
-        inputs, gts = batch
+        name, inputs, gts = batch
         preds = self.forward(inputs)
         loss, loss_dict = self.loss(preds, gts)
         return loss, loss_dict, preds, gts
@@ -113,8 +113,7 @@ class IMG2PBRLitModule(LightningModule):
         loss, loss_dict, preds, targets = self.model_step(batch)
         
         # update and log metrics
-        self.log('lr', self.learning_rate, prog_bar=False, on_step=False, on_epoch=True)
-        self.log("train/loss", loss, prog_bar=True, on_step=True, on_epoch=True)
+        self.log("train/loss", loss.detach(), prog_bar=True, on_step=True, on_epoch=True)
         for loss_k, loss_v in loss_dict.items():
             self.log(f"train/{loss_k}", loss_v, prog_bar=False, on_step=False, on_epoch=True)
         
@@ -132,14 +131,14 @@ class IMG2PBRLitModule(LightningModule):
         loss, loss_dict, preds, targets = self.model_step(batch)
         
         # update and log metrics
-        self.lpips(preds, targets)
-        self.ssim(preds, targets)
+        # self.lpips(preds, targets)
+        # self.ssim(preds, targets)
         self.rmse(preds, targets)
         
-        self.log("val/lpips", self.lpips, prog_bar=False, on_step=False, on_epoch=True)
-        self.log("val/ssim", self.ssim, prog_bar=False, on_step=False, on_epoch=True)
+        # self.log("val/lpips", self.lpips, prog_bar=False, on_step=False, on_epoch=True)
+        # self.log("val/ssim", self.ssim, prog_bar=False, on_step=False, on_epoch=True)
         self.log("val/rmse", self.rmse, prog_bar=False, on_step=False, on_epoch=True)
-        self.log("val/loss", loss, prog_bar=True, on_step=True, on_epoch=True)
+        self.log("val/loss", loss.detach(), prog_bar=True, on_step=True, on_epoch=True)
         for loss_k, loss_v in loss_dict.items():
             self.log(f"val/{loss_k}", loss_v, prog_bar=False, on_step=False, on_epoch=True)
             
@@ -171,3 +170,30 @@ class IMG2PBRLitModule(LightningModule):
                 },
             }
         return {"optimizer": optimizer}
+    
+    @torch.no_grad()
+    def log_images(
+        self, batch: Tuple[str, torch.Tensor, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
+        """Log model prediction images and gt images
+        
+        :return: A dict of images to be logged.
+        """
+        log = dict()
+        name, inputs, gts = batch
+        inputs = inputs.to(self.device)
+        preds = self.forward(inputs)
+        
+        log["inputs"] = inputs
+        _, C, _, _ = preds.shape
+        if C > 3:
+            log["albedo"] = gts[:, :3, ...]
+            log["normal"] = gts[:, 3:6, ...]
+            log["rough"] = gts[:, 6:7, ...].repeat(1, 3, 1, 1)
+            log["metal"] = gts[:, 7:, ...].repeat(1, 3, 1, 1)
+            log["albedo_rec"] = preds[:, :3, ...]
+            log["normal_rec"] = preds[:, 3:6, ...]
+            log["rough_rec"] = preds[:, 6:7, ...].repeat(1, 3, 1, 1)
+            log["metal_rec"] = preds[:, 7:, ...].repeat(1, 3, 1, 1)
+
+        return log
