@@ -1,9 +1,8 @@
 import os
-from typing import Any, List, Dict
+from typing import Any, List, Tuple
 
 import numpy as np
 import hydra
-import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 from PIL import Image
@@ -155,7 +154,7 @@ class PBROvercastHdrRenderDataset(Dataset):
         """
         return self._tform(image)
     
-    def __getitem__(self, index) -> Dict:
+    def __getitem__(self, index) -> Tuple[Any]:
         name, input, gt = self._data[index]
         input = self._img_process(input)
         gt = self._img_process(gt)

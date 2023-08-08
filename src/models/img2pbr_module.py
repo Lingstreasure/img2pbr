@@ -66,7 +66,7 @@ class IMG2PBRLitModule(LightningModule):
         # metrics
         # self.lpips = LearnedPerceptualImagePatchSimilarity()
         # self.ssim = StructuralSimilarityIndexMeasure()
-        self.rmse = RootMeanSquaredErrorUsingSlidingWindow()
+        # self.rmse = RootMeanSquaredErrorUsingSlidingWindow()
         
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor]:
         """Perform a forward pass through the model `self.model`.
@@ -82,7 +82,7 @@ class IMG2PBRLitModule(LightningModule):
         # so it's worth to make sure validation metrics don't store results from these checks
         # self.lpips.reset()
         # self.ssim.reset()
-        self.rmse.reset()
+        # self.rmse.reset()
         
     def model_step(
         self, batch: Tuple[str, torch.Tensor, torch.Tensor]
@@ -129,15 +129,15 @@ class IMG2PBRLitModule(LightningModule):
         :param batch_idx: The index of the current batch.
         """
         loss, loss_dict, preds, targets = self.model_step(batch)
-        
+
         # update and log metrics
         # self.lpips(preds, targets)
         # self.ssim(preds, targets)
-        self.rmse(preds, targets)
+        # self.rmse(preds, targets)
         
         # self.log("val/lpips", self.lpips, prog_bar=False, on_step=False, on_epoch=True)
         # self.log("val/ssim", self.ssim, prog_bar=False, on_step=False, on_epoch=True)
-        self.log("val/rmse", self.rmse, prog_bar=False, on_step=False, on_epoch=True)
+        # self.log("val/rmse", self.rmse, prog_bar=False, on_step=False, on_epoch=True)
         self.log("val/loss", loss.detach(), prog_bar=True, on_step=True, on_epoch=True)
         for loss_k, loss_v in loss_dict.items():
             self.log(f"val/{loss_k}", loss_v, prog_bar=False, on_step=False, on_epoch=True)
