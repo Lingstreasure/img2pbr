@@ -4,23 +4,29 @@ model:
   _target_: src.models.components.unet_multi_decoder.UNetMultiDecoderModel
   in_channels: 3
   out_channels:
-    - 3  # albedo
-    - 3  # normal
-    - 1  # roughness
-    - 1  # metalness
+    - 3 # albedo
+    - 3 # normal
+    - 1 # roughness
+    # - 1  # metalness
   num_conv_blocks: 1
   channel_mult: [1, 1, 1, 1]
   use_self_attention: False
   use_ViT_bottleneck: False
+  use_interpolation: False
   use_MLP_out: False
   use_fp16: False
 
 loss:
   _target_: src.models.components.losses.pbr_recloss.PBRReconstructionLoss
-  random_per_loss_weight: 0.
+  rec_loss_weights: [1., 3., 1.]
+  pbr_ch_nums: [3, 3, 1] #, 1]
+  per_loss_after_num_epochs: 10
+  per_loss_net: alex
+  random_per_loss_weight: 0.1
+  focal_loss_weight: 0.1
   per_loss_weight: 0.
-  render_loss_weight: 0.  # not implementation
-  gan_loss_weight: 0.  # not implementation
+  render_loss_weight: 0. # not implementation
+  gan_loss_weight: 0. # not implementation
 
 optimizer:
   _target_: torch.optim.Adam
@@ -29,11 +35,20 @@ optimizer:
   weight_decay: 0.
 
 scheduler:
-  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
-  _partial_: True
-  mode: min
-  min_lr: 1.e-6
-  factor: 0.1
-  patience: 10
-  
+#   _target_: torch.optim.lr_scheduler.LambdaLR
+#   _partial_: True
+#   lr_lambda:
+#     _target_: src.models.components.lr_schedulers.LambdaWarmUpCosineScheduler
+#     warm_up_steps: 10
+#     lr_min: 1.e-3
+#     lr_max: 1.e-3
+#     lr_start: 1.e-5
+#     max_decay_steps: 11  # > warm_up_steps
 
+# scheduler:
+#   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+#   _partial_: True
+#   mode: min
+#   min_lr: 1.e-4
+#   factor: 0.5
+#   patience: 10

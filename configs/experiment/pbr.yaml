@@ -13,26 +13,41 @@ defaults:
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
-tags: ["pbr", "unet_multi_decoder"]
-task_name: "pbr_reconstruction"
-test: False
+task_name: "pbr_reconstruction/train"
+tags:
+  ["instance norm", "alex_LPIPS", "3*normal_rec_loss", "focal_frequency_loss"]
+test: True
 compile: False
 seed: 42
 
 trainer:
   min_epochs: 1
-  max_epochs: 100
-  benchmark: True
+  max_epochs: 200
+  benchmark: True # not visible speed up
   check_val_every_n_epoch: 1
+  log_every_n_steps: 25
 
 model:
   optimizer:
     lr: 1.e-3
   model:
+    num_groups: 1 # set 1 to avoid werid actifact in output
+    use_batch_norm: False # use this will forbidden group norm
     use_self_attention: False
     use_ViT_bottleneck: False
-    use_MLP_out: False
+    use_interpolation: False
+    use_MLP_out: True
     use_fp16: False
 
 data:
   batch_size: 16
+  num_workers: 4
+  # data_train:
+  #     debug_on: on
+  #     debug_data_num: 200
+  # data_val:
+  #     debug_on: on
+  #     debug_data_num: 200
+  # data_test:
+  #     debug_on: on
+  #     debug_data_num: 200

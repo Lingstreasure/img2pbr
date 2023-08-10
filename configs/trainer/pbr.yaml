@@ -5,8 +5,9 @@ default_root_dir: ${paths.output_dir}
 min_epochs: 1 # prevents early stopping
 max_epochs: 100
 
+strategy: ddp_find_unused_parameters_true
 accelerator: gpu
-devices: 1
+devices: 2
 
 # mixed precision for extra speed-up
 # precision: 16
