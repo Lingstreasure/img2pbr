@@ -2,7 +2,8 @@ from contextlib import contextmanager
 from typing import Any, Dict, List, Literal, Tuple
 
 import torch
-from torch import nn
+import torch.nn as nn
+from focal_frequency_loss import FocalFrequencyLoss as FFL
 
 from src.models.components.losses.lpips import LPIPS
 
@@ -21,6 +22,7 @@ class PBRReconstructionLoss(nn.Module):
         per_loss_after_num_epochs: int = 10,
         random_per_loss_weight: float = 0.0,
         per_loss_weight: float = 0.0,
+        focal_loss_weight: float = 0.0,
         render_loss_weight: float = 0.0,
         gan_loss_weight: float = 0.0,
     ) -> None:
@@ -31,6 +33,7 @@ class PBRReconstructionLoss(nn.Module):
         :param per_loss_after_num_epochs: Activate the perceptual loss after the number epochs. Default to `10`.
         :param random_per_loss_weight: The weight of channels-random-selected perceptual loss. Default to `0.`.
         :param per_loss_weight: The weight of perceptual loss. Default to `0.`.
+        :param focal_loss_weight: The weight of focal frequency loss. Default to `0`.
         :param render_loss_weight: The weight of differentialable rendering loss. Default to `0.`.
         :param gan_loss_weight: The weight of GAN-based loss. Default to `0.`.
         """
@@ -49,10 +52,14 @@ class PBRReconstructionLoss(nn.Module):
             # self.renderer = Renderer(normal_format='dx')
             pass
 
+        if focal_loss_weight > 0.0:
+            self.ff_loss = FFL(loss_weight=focal_loss_weight)
+
         self.p_loss_after_num_epochs = per_loss_after_num_epochs
         self.random_per_loss_weight = random_per_loss_weight
         self.per_loss_weight = per_loss_weight
         self.render_loss_weight = render_loss_weight
+        self.focal_loss_weight = focal_loss_weight
         self.gan_loss_weight = gan_loss_weight
 
     def forward(
@@ -98,7 +105,7 @@ class PBRReconstructionLoss(nn.Module):
             indexes = torch.randint(0, C, (3,))  # random select 3 channels
             random_per_loss = self.perceptual_loss(
                 preds[:, indexes, ...].contiguous(), targets[:, indexes, ...].contiguous()
-            ).mean()
+            ).sum()
             random_per_loss = random_per_loss * self.random_per_loss_weight
             log["random_per_loss"] = random_per_loss.detach()
 
@@ -122,7 +129,22 @@ class PBRReconstructionLoss(nn.Module):
             )
             log["render_loss"] = render_loss.detach()
 
+        # focal frequency loss
+        ff_loss = 0.0
+        if self.focal_loss_weight > 0.0:
+            start_idx = 0
+            for num in self.pbr_ch_nums:
+                end_idx = start_idx + num
+                ff_loss += self.ff_loss(
+                    preds[:, start_idx:end_idx, ...].contiguous(),
+                    targets[:, start_idx:end_idx, ...].contiguous(),
+                ).mean()
+                start_idx = end_idx
+
+            ff_loss *= self.focal_loss_weight
+            log["ff_loss"] = ff_loss.detach()
+
         # total loss
-        loss = rec_loss + random_per_loss + render_loss + p_loss
+        loss = rec_loss + random_per_loss + render_loss + p_loss + ff_loss
 
         return loss, log
