@@ -1,3 +1,3 @@
-CUDA_VISIBLE_DEVICES=1 \
+#!/bin/bash
 python src/train.py \
-    experiment=pbr.yaml
+    experiment=pbr \
