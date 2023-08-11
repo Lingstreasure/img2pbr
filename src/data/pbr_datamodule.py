@@ -1,67 +1,69 @@
 from typing import Any, Optional
 
 import hydra
-from torch.utils.data import Dataset, DataLoader
 from lightning import LightningDataModule
 from omegaconf import DictConfig
+from torch.utils.data import DataLoader, Dataset
+
 
 class PBRDataModule(LightningDataModule):
     """A universal `LightningDataModule` for PBR dataset.
-    ```python
-        def prepare_data(self):
-        # Things to do on 1 GPU/TPU (not on every GPU/TPU in DDP).
-        # Download data, pre-process, split, save to disk, etc...
 
-        def setup(self, stage):
-        # Things to do on every process in DDP.
-        # Load data, set variables, etc...
+    def prepare_data(self):
+    # Things to do on 1 GPU/TPU (not on every GPU/TPU in DDP).
+    # Download data, pre-process, split, save to disk, etc...
 
-        def train_dataloader(self):
-        # return train dataloader
+    def setup(self, stage):
+    # Things to do on every process in DDP.
+    # Load data, set variables, etc...
 
-        def val_dataloader(self):
-        # return validation dataloader
+    def train_dataloader(self):
+    # return train dataloader
 
-        def test_dataloader(self):
-        # return test dataloader
+    def val_dataloader(self):
+    # return validation dataloader
 
-        def predict_dataloader(self):
-        # return predict dataloader
+    def test_dataloader(self):
+    # return test dataloader
 
-        def teardown(self, stage):
-        # Called on every process in DDP.
-        # Clean up after fit or test.
-    ```
+    def predict_dataloader(self):
+    # return predict dataloader
+
+    def teardown(self, stage):
+    # Called on every process in DDP.
+    # Clean up after fit or test.
     """
-    
+
     def __init__(
         self,
-        batch_size: int, 
+        batch_size: int,
         num_workers: int = 0,
         pin_memory: bool = False,
-        data_train: Dataset = None, 
+        data_train: Dataset = None,
         data_val: Dataset = None,
         data_test: Dataset = None,
+        data_pred: Dataset = None,
     ) -> None:
         """Initialize a `PBRDataModule`.
-        
+
         :param batch_size: The batch size.
         :param num_workers: The number of workers. Defaults to `0`.
         :param pin_memory: Whether to pin memory. Defaults to `False`.
         :param data_train: The train dataset. Defaults to `None`.
         :param data_val: The validation dataset. Defaults to `None`.
         :param data_test: The test dataset. Defaults to `None`.
+        :param data_pred: The inference dataset. Defaults to `None`.
         """
         super().__init__()
-        
+
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
         self.save_hyperparameters(logger=False)
-        
+
         self.data_train: Optional[Dataset] = None
         self.data_val: Optional[Dataset] = None
         self.data_test: Optional[Dataset] = None
-    
+
     def prepare_data(self) -> None:
         """Download data if needed. Lightning ensures that `self.prepare_data()` is called only
         within a single process on CPU, so you can safely add your downloading logic within. In
@@ -72,7 +74,7 @@ class PBRDataModule(LightningDataModule):
         """
         # already processed
         pass
-        
+
     def setup(self, stage: Optional[str] = None) -> None:
         """Load data. Set variables: `self.data_train`, `self.data_val`, `self.data_test`.
 
@@ -84,16 +86,19 @@ class PBRDataModule(LightningDataModule):
         :param stage: The stage to setup. Either `"fit"`, `"validate"`, `"test"`, or `"predict"`. Defaults to ``None``.
         """
         # load dataset
-        if stage == 'fit' or stage == None:
-            self.data_train = self.hparams.data_train() 
+        if stage == "fit" or stage is None:
+            self.data_train = self.hparams.data_train()
             self.data_val = self.hparams.data_val() if self.hparams.data_val else None
-        
-        if stage == 'test':
+
+        if stage == "test":
             self.data_test = self.hparams.data_test() if self.hparams.data_test else None
-        
+
+        if stage == "predict":
+            self.data_pred = self.hparams.data_pred() if self.hparams.data_pred else None
+
     def train_dataloader(self) -> DataLoader[Any]:
         """Create and return the train dataloader.
-        
+
         :return: The train dataloader
         """
         return DataLoader(
@@ -103,10 +108,10 @@ class PBRDataModule(LightningDataModule):
             pin_memory=self.hparams.pin_memory,
             shuffle=True,
         )
-        
+
     def val_dataloader(self) -> DataLoader[Any]:
         """Create and return the validation dataloader.
-        
+
         :return: The validation dataloader
         """
         return DataLoader(
@@ -116,10 +121,10 @@ class PBRDataModule(LightningDataModule):
             pin_memory=self.hparams.pin_memory,
             shuffle=False,
         )
-        
+
     def test_dataloader(self) -> DataLoader[Any]:
         """Create and return the test dataloader.
-        
+
         :return: The test dataloader
         """
         return DataLoader(
@@ -129,7 +134,20 @@ class PBRDataModule(LightningDataModule):
             pin_memory=self.hparams.pin_memory,
             shuffle=False,
         )
-    
+
+    def predict_dataloader(self) -> DataLoader[Any]:
+        """Create and return the predict dataloader.
+
+        :return: The predict dataloader
+        """
+        return DataLoader(
+            dataset=self.data_pred,
+            batch_size=self.hparams.batch_size,
+            num_workers=self.hparams.num_workers,
+            pin_memory=self.hparams.pin_memory,
+            shuffle=False,
+        )
+
     def teardown(self, stage: Optional[str] = None) -> None:
         """Lightning hook for cleaning up after `trainer.fit()`, `trainer.validate()`,
         `trainer.test()`, and `trainer.predict()`.

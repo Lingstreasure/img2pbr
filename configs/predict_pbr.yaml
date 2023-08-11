@@ -1,0 +1,17 @@
+# @package _global_
+
+defaults:
+  - _self_
+  - data: mnist # choose datamodule with `test_dataloader()` for evaluation
+  - model: mnist
+  - logger: null
+  - trainer: default
+  - paths: default
+  - extras: default
+  - hydra: default
+  - experiment: pbr
+
+task_name: "pbr_reconstruction/predict"
+
+# passing checkpoint path is necessary for evaluation
+ckpt_path: null

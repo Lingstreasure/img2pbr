@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 
 import torch
 from lightning import LightningModule
@@ -187,6 +187,20 @@ class IMG2PBRLitModule(LightningModule):
             )
 
             start_idx = end_idx
+
+    def predict_step(
+        self, batch: Tuple[str, torch.Tensor, torch.Tensor], batch_idx: int
+    ) -> Tuple[Any]:
+        """Perform a single validation step on a batch of data from the validation set.
+
+        :param batch: A batch of data (a tuple) containing the sample name and input, gt tensor of
+            images.
+        :param batch_idx: The index of the current batch.
+        """
+
+        names, inputs, gts = batch
+        preds = self.model(inputs)
+        return names, inputs, gts, preds
 
     def configure_optimizers(self) -> Dict[str, Any]:
         """Configures optimizers and learning-rate schedulers to be used for training.
