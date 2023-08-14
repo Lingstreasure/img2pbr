@@ -107,7 +107,7 @@ class IMG2PBRLitModule(LightningModule):
         loss, loss_dict, preds, targets = self.model_step(batch)
 
         # update and log metrics
-        self.log("train/loss", loss.detach(), prog_bar=True, on_step=True, on_epoch=True)
+        self.log("train/loss", loss.clone().detach(), prog_bar=True, on_step=True, on_epoch=True)
         for loss_k, loss_v in loss_dict.items():
             self.log(f"train/{loss_k}", loss_v, prog_bar=False, on_step=False, on_epoch=True)
 
@@ -125,7 +125,7 @@ class IMG2PBRLitModule(LightningModule):
         loss, loss_dict, preds, targets = self.model_step(batch)
 
         # update and log metrics
-        self.log("val/loss", loss.detach(), prog_bar=True, on_step=True, on_epoch=True)
+        self.log("val/loss", loss.clone().detach(), prog_bar=True, on_step=True, on_epoch=True)
         for loss_k, loss_v in loss_dict.items():
             self.log(f"val/{loss_k}", loss_v, prog_bar=False, on_step=False, on_epoch=True)
 
