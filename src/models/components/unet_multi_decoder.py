@@ -10,6 +10,7 @@ from src.models.components.basic_module import (
     LinearAttention,
     Upsample2D,
 )
+from src.models.components.cbam import CBAM
 from src.models.components.mobile_vit import MobileVit
 
 
@@ -72,7 +73,7 @@ class UNetMultiDecoderModel(nn.Module):
         self.outs = nn.ModuleList()
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        fea_channels = [32 * pow(2, level) for level in range(len(channel_mult))]
+        fea_channels = [model_channels * pow(2, level) for level in range(len(channel_mult))]
 
         # downsampling
         layers = []
@@ -94,7 +95,8 @@ class UNetMultiDecoderModel(nn.Module):
 
         # bottleneck module
         if use_ViT_bottleneck:
-            self.middle_block = MobileVit()
+            # self.middle_block = MobileVit()
+            self.middle_block = CBAM(gate_channels=in_channels)
         else:
             self.middle_block = ConvBlock(
                 in_channels=in_channels,
