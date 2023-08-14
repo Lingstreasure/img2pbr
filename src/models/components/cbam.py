@@ -21,17 +21,17 @@ class BasicConv(nn.Module):
         kernel_size: int,
         stride: int = 1,
         padding: int = 0,
-        dilation: int = 0,
+        dilation: int = 1,
         groups: int = 1,
         bias: bool = True,
         activate: bool = True,
-        num_groups: int = 16,
+        num_groups: int = 1,
     ) -> None:
-        """Initialize a BasicConv Module.
+        """Initialize a `BasicConv`.
 
         :param 1~8: Same with the pytorch nn.Conv2d module.
         :param activate: Whether to use a activation layer. Default to `True`.
-        :param num_groups: The number of normalization group. Default to `16`.
+        :param num_groups: The number of normalization group. Default to `1`.
         """
         super().__init__()
         self.out_channels = out_channels
@@ -66,7 +66,7 @@ class ChannelGate(nn.Module):
     """
 
     def __init__(self, gate_channels, reduction_ratio=16, pool_types=["avg", "max"]) -> None:
-        """ "Initialize a ChannelGate module.
+        """ "Initialize a `ChannelGate`.
 
         :param gate_channels: The channel of input feature.
         :param reduction_ratio: The reduction ratio between gate_channels and hidden units number
@@ -137,7 +137,7 @@ class SpatialGate(nn.Module):
     """
 
     def __init__(self) -> None:
-        """Initialize a SpatialGate module."""
+        """Initialize a `SpatialGate`."""
         super().__init__()
         kernel_size = 7
         self.compress = ChannelPool()
@@ -172,7 +172,7 @@ class CBAM(nn.Module):
         pool_types: Sequence[str] = ["avg", "max"],
         no_spatial: bool = False,
     ) -> None:
-        """Initialize a CBAM module.
+        """Initialize a `CBAM`.
 
         :param gate_channels: The channel of input feature.
         :param reduction_ratio: The reduction ratio between gate_channels and hidden units number of MLP.
@@ -193,3 +193,9 @@ class CBAM(nn.Module):
         if not self.no_spatial:
             x_out = self.SpatialGate(x_out)
         return x_out
+
+
+if __name__ == "__main__":
+    x = torch.randn((2, 32, 8, 8))  # .to('cuda')
+    net = CBAM(gate_channels=32)  # .to('cuda')
+    x = net(x)
