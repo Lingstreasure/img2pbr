@@ -16,6 +16,7 @@ class PBRReconstructionLoss(nn.Module):
     def __init__(
         self,
         rec_loss_weights: List[float],
+        apply_sharpness_weight: False,
         pbr_ch_nums: List[int],
         per_loss_net: Literal["alex", "vgg"] = "alex",
         per_loss_after_num_epochs: int = -1,
@@ -27,6 +28,7 @@ class PBRReconstructionLoss(nn.Module):
     ) -> None:
         """
         :param rec_loss_weights: The list of reconstruction loss weights between pbr maps, equal with numbers of model decoders.
+        :param apply_sharpness_weight: Whether to apply an e^(-x) function to Z axis of normal map for sharper edges.
         :param pbr_ch_nums: The list contained channel numbers of multi pbr maps, equal with numbers of model decoders.
         :param per_loss_net: The pretrained net used for calculating LPIPS. Default to `alex`.
         :param per_loss_after_num_epochs: Activate the perceptual loss after the number epochs. Default to `-1`.
@@ -42,6 +44,7 @@ class PBRReconstructionLoss(nn.Module):
         ), "rec loss weights list and should own same length with pbr map numbers"
 
         self.rec_loss_weights = rec_loss_weights
+        self.apply_sharpness_weight = apply_sharpness_weight
         self.pbr_ch_nums = pbr_ch_nums
 
         if random_per_loss_weight > 0.0 or per_loss_weight > 0.0:
@@ -52,7 +55,7 @@ class PBRReconstructionLoss(nn.Module):
             pass
 
         if focal_loss_weight > 0.0:
-            self.ff_loss = FFL(loss_weight=focal_loss_weight)
+            self.ff_loss = FFL(loss_weight=1.0)
 
         self.p_loss_after_num_epochs = per_loss_after_num_epochs
         self.random_per_loss_weight = random_per_loss_weight
@@ -96,7 +99,7 @@ class PBRReconstructionLoss(nn.Module):
     @multi_map_wrapper
     def cal_rec_loss(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """Calculate reconstruction loss on a pbr map."""
-        return torch.abs(pred.contiguous() - target.contiguous()).mean()
+        return torch.abs(pred.contiguous() - target.contiguous())
 
     @multi_map_wrapper
     def cal_per_loss(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
@@ -159,6 +162,15 @@ class PBRReconstructionLoss(nn.Module):
         rec_loss = 0.0
         losses = self.cal_rec_loss(pred, target)
         for idx, loss in enumerate(losses):
+            # apply sharpness weight on normal map
+            if self.apply_sharpness_weight and idx == 1:
+                # weight map is inversely proportional to the Z component of gt normal
+                weight_map = (
+                    1 / pred[:, self.map_idxes[1][1], ...] + 0.5
+                )  # make weight value in (2/3, 2)
+                loss *= weight_map.unsqueeze(1)
+
+            loss = loss.mean()
             rec_loss += loss * self.rec_loss_weights[idx]
             log[f"rec_loss/{idx}"] = loss.detach()
 
@@ -167,7 +179,7 @@ class PBRReconstructionLoss(nn.Module):
         # perceptual loss, only start when weight and epoch conditions are met
         p_loss = 0.0
         if self.per_loss_weight > 0.0 and cur_epoch > self.p_loss_after_num_epochs:
-            p_loss += sum(self.cal_per_loss(pred, target))
+            p_loss = sum(self.cal_per_loss(pred, target))
             p_loss *= self.per_loss_weight
             log["per_loss"] = p_loss.detach()
 
