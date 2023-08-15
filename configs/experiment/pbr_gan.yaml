@@ -1,0 +1,75 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=pbr
+
+defaults:
+  - override /data: pbr
+  - override /model: pbr_gan
+  - override /callbacks: pbr
+  - override /trainer: pbr
+  - override /logger: tensorboard
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+task_name: "pbr_reconstruction/train_gan"
+tags: ["instance norm", "U-net based GAN training"]
+
+test: True
+compile: False
+seed: 42
+
+trainer:
+  min_epochs: 1
+  max_epochs: 120
+  benchmark: True # not visible speed up
+  check_val_every_n_epoch: 1
+  log_every_n_steps: 25
+
+model:
+  optimizer_G:
+    lr: 1.e-3
+
+  optimizer_D:
+    lr: 5.e-3
+
+  generator:
+    num_conv_blocks: 1
+    channel_mult: [1, 1, 1, 1]
+    use_batch_norm: False # use this will forbidden group norm
+    use_self_attention: False
+    use_ViT_bottleneck: False
+    use_interpolation: False
+    use_MLP_out: False
+    use_fp16: False
+
+  discriminator:
+    num_conv_blocks: 1
+    channel_mult: [1, 1, 1, 1]
+    use_batch_norm: False # use this will forbidden group norm
+    use_self_attention: False
+    use_ViT_bottleneck: False
+    use_interpolation: False
+    use_MLP_out: False
+    use_fp16: False
+
+data:
+  batch_size: 20
+  num_workers: 4
+  # data_train:
+  #     debug_on: on
+  #     debug_data_num: 50
+  # data_val:
+  #     debug_on: on
+  #     debug_data_num: 50
+  # data_test:
+  #     debug_on: on
+  #     debug_data_num: 50
+  # data_pred:
+  #   debug_on: on
+  #   debug_data_num: 50
+
+callbacks:
+  model_checkpoint:
+    monitor: val/G/rec_loss

@@ -1,0 +1,77 @@
+_target_: src.models.img2pbr_gan_module.IMG2PBRGANLitModule
+adv_loss_weight: 0.2
+generator:
+  _target_: src.models.components.unet_multi_decoder.UNetMultiDecoderModel
+  in_channels: 3
+  out_channels:
+    - 3 # albedo
+    - 3 # normal
+    - 1 # roughness
+    # - 1  # metalness
+  num_groups: 1 # set 1 to avoid werid actifact in output
+  num_conv_blocks: 1
+  channel_mult: [1, 1, 1, 1]
+  use_self_attention: False
+  use_ViT_bottleneck: False
+  use_interpolation: False
+  use_MLP_out: False
+  use_fp16: False
+
+discriminator:
+  _target_: src.models.components.unet_discriminator.UNetDiscriminator
+  in_channels: 7
+  out_channels:
+    - 3 # albedo
+    - 3 # normal
+    - 1 # roughness
+    # - 1  # metalness
+  num_groups: 1
+  num_conv_blocks: 1
+  channel_mult: [1, 1, 1, 1]
+  use_self_attention: False
+  use_ViT_bottleneck: False
+  use_interpolation: False
+  use_MLP_out: False
+  use_fp16: False
+
+loss_G:
+  _target_: src.models.components.losses.pbr_recloss.PBRReconstructionLoss
+  rec_loss_weights: [1., 1., 0.2]
+  apply_sharpness_weight: False
+  pbr_ch_nums: [3, 3, 1] #, 1]
+  per_loss_after_num_epochs: -1
+  per_loss_net: alex
+  random_per_loss_weight: 0.
+  focal_loss_weight: 0.
+  per_loss_weight: 0.
+  render_loss_weight: 0. # not implementation
+
+loss_D:
+  _target_: torch.nn.BCEWithLogitsLoss
+
+optimizer_G:
+  _target_: torch.optim.Adam
+  _partial_: True
+  lr: 1.e-3
+  weight_decay: 0.
+
+optimizer_D:
+  _target_: torch.optim.Adam
+  _partial_: True
+  lr: 5.e-3
+  weight_decay: 0.
+# scheduler_G:
+#   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+#   _partial_: True
+#   mode: min
+#   min_lr: 1.e-4
+#   factor: 0.5
+#   patience: 10
+
+# scheduler_D:
+#   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+#   _partial_: True
+#   mode: min
+#   min_lr: 1.e-4
+#   factor: 0.5
+#   patience: 10
