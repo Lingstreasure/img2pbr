@@ -236,13 +236,23 @@ class IMG2PBRLitModule(LightningModule):
         log["inputs"] = inputs
         _, C, _, _ = preds.shape
         if C > 3:
-            log["albedo"] = gts[:, :3, ...]
-            log["normal"] = gts[:, 3:6, ...]
-            log["rough"] = gts[:, 6:7, ...].repeat(1, 3, 1, 1)
-            # log["metal"] = gts[:, 7:, ...].repeat(1, 3, 1, 1)
-            log["albedo_rec"] = preds[:, :3, ...]
-            log["normal_rec"] = preds[:, 3:6, ...]
-            log["rough_rec"] = preds[:, 6:7, ...].repeat(1, 3, 1, 1)
-            # log["metal_rec"] = preds[:, 7:, ...].repeat(1, 3, 1, 1)
+            map_type = ["albedo", "normal", "rough", "metal"]
+            start_idx = 0
+            for idx, num in enumerate(self.model.out_channels):
+                end_idx = start_idx + num
+
+                # extract each pbr map
+                pred = preds[:, start_idx:end_idx, ...]
+                target = gts[:, start_idx:end_idx, ...]
+
+                if pred.size(1) == 1:  # rough or metal
+                    pred = pred.repeat(1, 3, 1, 1)
+                    target = target.repeat(1, 3, 1, 1)
+
+                # log the pbr map
+                log[map_type[idx] + "_rec"] = pred
+                log[map_type[idx]] = target
+
+                start_idx = end_idx
 
         return log
