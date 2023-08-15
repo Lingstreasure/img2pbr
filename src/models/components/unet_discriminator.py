@@ -19,7 +19,7 @@ class UNetDiscriminator(nn.Module):
 
     def __init__(
         self,
-        in_channels: int = 3,
+        in_channels: int = 8,
         out_channels: Sequence[int] = (3, 3, 1, 1),
         model_channels: int = 32,
         num_conv_blocks: Union[int, Sequence[int]] = 1,
@@ -55,7 +55,9 @@ class UNetDiscriminator(nn.Module):
                          Default to `False`.
         """
         super().__init__()
-
+        assert in_channels == sum(
+            out_channels
+        ), "Number of input channels should equal output channels sum."
         if isinstance(num_conv_blocks, int):
             self.num_conv_blocks = len(channel_mult) * [num_conv_blocks]
         else:
@@ -180,15 +182,15 @@ class UNetDiscriminator(nn.Module):
                 outs[idx] = modules[1](torch.cat([modules[0](outs[idx]), hs[level]], dim=1))
 
             outs[idx] = self.outs[idx](outs[idx]).type(x.dtype)
-            outs[idx] = torch.tanh(outs[idx])
+            # outs[idx] = torch.tanh(outs[idx])
 
         return bottle_neck_out, torch.concat(outs, dim=1)
 
 
 if __name__ == "__main__":
     model = UNetDiscriminator(
-        in_channels=3,
-        out_channels=[3, 3],
+        in_channels=8,
+        out_channels=[3, 3, 1, 1],
         num_conv_blocks=1,
         channel_mult=(1, 1, 1, 1),
         use_self_attention=False,
@@ -200,6 +202,6 @@ if __name__ == "__main__":
     print(model)
     cnt = sum(p.numel() for p in model.parameters())
     print(cnt, "\t", f"{cnt / 1000000:.2f}", "M")
-    imgs = torch.randn((4, 3, 512, 512))
+    imgs = torch.randn((4, 8, 512, 512))
     middle_out, outs = model(imgs)
     print(outs.shape)
