@@ -24,7 +24,6 @@ class PBRReconstructionLoss(nn.Module):
         per_loss_weight: float = 0.0,
         focal_loss_weight: float = 0.0,
         render_loss_weight: float = 0.0,
-        gan_loss_weight: float = 0.0,
     ) -> None:
         """
         :param rec_loss_weights: The list of reconstruction loss weights between pbr maps, equal with numbers of model decoders.
@@ -36,7 +35,6 @@ class PBRReconstructionLoss(nn.Module):
         :param per_loss_weight: The weight of perceptual loss. Default to `0.`.
         :param focal_loss_weight: The weight of focal frequency loss. Default to `0`.
         :param render_loss_weight: The weight of differentialable rendering loss. Default to `0.`.
-        :param gan_loss_weight: The weight of GAN-based loss. Default to `0.`.
         """
         super().__init__()
         assert len(rec_loss_weights) == len(
@@ -62,7 +60,6 @@ class PBRReconstructionLoss(nn.Module):
         self.per_loss_weight = per_loss_weight
         self.render_loss_weight = render_loss_weight
         self.focal_loss_weight = focal_loss_weight
-        self.gan_loss_weight = gan_loss_weight
 
         self.map_idxes = []
         start_idx = 0
