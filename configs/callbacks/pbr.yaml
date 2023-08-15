@@ -2,7 +2,7 @@ defaults:
   - model_checkpoint
   - model_summary
   - rich_progress_bar
-  - _self_  # this can override configs above
+  - _self_ # this can override configs above
 
 model_checkpoint:
   dirpath: ${paths.output_dir}/checkpoints
@@ -19,7 +19,7 @@ model_summary:
 
 image_logger:
   _target_: src.callbacks.img_logger.ImageLogger
-  check_batch_idx: 10
+  check_batch_idx: 5
   max_images: 4
   clamp: True
   log_first_step: True

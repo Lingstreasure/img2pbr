@@ -18,15 +18,15 @@ model:
 
 loss:
   _target_: src.models.components.losses.pbr_recloss.PBRReconstructionLoss
-  rec_loss_weights: [1., 3., 1.]
+  rec_loss_weights: [1., 1., 0.2]
+  apply_sharpness_weight: False
   pbr_ch_nums: [3, 3, 1] #, 1]
-  per_loss_after_num_epochs: 10
+  per_loss_after_num_epochs: -1
   per_loss_net: alex
-  random_per_loss_weight: 0.1
-  focal_loss_weight: 0.1
+  random_per_loss_weight: 0.
+  focal_loss_weight: 0.
   per_loss_weight: 0.
   render_loss_weight: 0. # not implementation
-  gan_loss_weight: 0. # not implementation
 
 optimizer:
   _target_: torch.optim.Adam
@@ -34,7 +34,7 @@ optimizer:
   lr: 1.e-3
   weight_decay: 0.
 
-scheduler:
+# scheduler:
 #   _target_: torch.optim.lr_scheduler.LambdaLR
 #   _partial_: True
 #   lr_lambda:
@@ -45,10 +45,10 @@ scheduler:
 #     lr_start: 1.e-5
 #     max_decay_steps: 11  # > warm_up_steps
 
-# scheduler:
-#   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
-#   _partial_: True
-#   mode: min
-#   min_lr: 1.e-4
-#   factor: 0.5
-#   patience: 10
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: True
+  mode: min
+  min_lr: 1.e-4
+  factor: 0.5
+  patience: 10
