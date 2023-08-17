@@ -224,8 +224,9 @@ class IMG2PBRLitModule(LightningModule):
 
     @torch.no_grad()
     def log_images(self, batch: Tuple[str, torch.Tensor, torch.Tensor]) -> Dict[str, torch.Tensor]:
-        """Log model prediction images and gt images.
+        """A interface of ImageLogger callback for logging images.
 
+        Log model prediction images and gt images.
         :return: A dict of images to be logged.
         """
         log = dict()
