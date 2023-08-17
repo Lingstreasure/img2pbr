@@ -51,6 +51,8 @@ class IMG2PBRGANLitModule(LightningModule):
         optimizer_D: torch.optim.Optimizer,
         scheduler_G: torch.optim.lr_scheduler = None,
         scheduler_D: torch.optim.lr_scheduler = None,
+        G_ckpt_path: str = None,
+        num_epoch_G_on: int = 10,
     ) -> None:
         """Initialize a `IMG2PBRGANLitModule`.
 
@@ -64,6 +66,8 @@ class IMG2PBRGANLitModule(LightningModule):
         :param optimizer_D: The optimizer used for training discriminator.
         :param scheduler_G: The learning rate scheduler used for generator.
         :param scheduler_G: The learning rate scheduler used for discriminator.
+        :param G_ckpt_path: The pre-trained generator ckpt path.
+        :param num_epoch_G_on: After how many epochs turn on the generator training.
         """
         super().__init__()
         # lightning 2.x doesn't support automatic optimization
@@ -79,6 +83,20 @@ class IMG2PBRGANLitModule(LightningModule):
         # generator and discriminator
         self.G = generator
         self.D = discriminator
+        self.num_epoch_G_on = num_epoch_G_on
+
+        # load pre-trained generator for better performance
+        if G_ckpt_path:
+            G_state_dict = torch.load(G_ckpt_path)["state_dict"]
+            new_state_dict = {}
+            for k, v in G_state_dict.items():
+                new_state_dict[k.replace("model.", "")] = v
+
+            del G_state_dict
+            self.G.load_state_dict(new_state_dict, strict=True)
+            print("*" * 20)
+            print(f"Load pre-trained generator from {G_ckpt_path}")
+            print("*" * 20)
 
         # losses
         self.loss_G = loss_G
@@ -151,7 +169,7 @@ class IMG2PBRGANLitModule(LightningModule):
         self,
         batch: Tuple[str, torch.Tensor, torch.Tensor],
         batch_idx: int,
-    ) -> torch.Tensor:
+    ) -> None:
         """Perform a single training step on a batch of data from the training set.
 
         :param batch: A batch of data (a tuple) containing the sample name and input, gt tensor of
@@ -161,6 +179,28 @@ class IMG2PBRGANLitModule(LightningModule):
         """
         name, inputs, gts = batch
         opt_G, opt_D = self.optimizers()
+
+        ################################
+        #         Discriminator
+        ################################
+        opt_D.zero_grad()
+
+        # calculate D loss
+        D_loss, D_loss_dict = self._D_step(inputs, gts)
+
+        # backward and update gards
+        self.manual_backward(D_loss)
+        opt_D.step()
+
+        # log D loss
+        self.log(
+            "train/D/D_loss", D_loss.clone().detach(), prog_bar=True, on_step=True, on_epoch=True
+        )
+        for loss_k, loss_v in D_loss_dict.items():
+            self.log(f"train/D/{loss_k}", loss_v, prog_bar=False, on_step=False, on_epoch=True)
+
+        if self.current_epoch < self.num_epoch_G_on:
+            return
 
         ################################
         #          Generator
@@ -181,25 +221,6 @@ class IMG2PBRGANLitModule(LightningModule):
         for loss_k, loss_v in G_loss_dict.items():
             self.log(f"train/G/{loss_k}", loss_v, prog_bar=False, on_step=False, on_epoch=True)
 
-        ################################
-        #         Discriminator
-        ################################
-        opt_D.zero_grad()
-
-        # calculate D loss
-        D_loss, D_loss_dict = self._D_step(inputs, gts)
-
-        # backward and update gards
-        self.manual_backward(D_loss)
-        opt_D.step()
-
-        # log D loss
-        self.log(
-            "train/D/D_loss", D_loss.clone().detach(), prog_bar=True, on_step=True, on_epoch=True
-        )
-        for loss_k, lossv in D_loss_dict.items():
-            self.log(f"train/D/{loss_k}", loss_v, prog_bar=False, on_step=False, on_epoch=True)
-
     def validation_step(
         self, batch: Tuple[str, torch.Tensor, torch.Tensor], batch_idx: int
     ) -> None:
@@ -211,6 +232,25 @@ class IMG2PBRGANLitModule(LightningModule):
         """
         name, inputs, gts = batch
 
+        # discriminator
+        D_loss, D_loss_dict = self._D_step(inputs, gts)
+        self.log(
+            "val/D/D_loss", D_loss.clone().detach(), prog_bar=True, on_step=False, on_epoch=True
+        )
+        for loss_k, loss_v in D_loss_dict.items():
+            self.log(f"val/D/{loss_k}", loss_v, prog_bar=False, on_step=False, on_epoch=True)
+
+        # log only once of pre-trained generator to pr·ent saving problem of model ckpt.
+        if self.current_epoch < self.num_epoch_G_on - 1:
+            self.log(
+                "val/G/rec_loss",
+                torch.ones((1,)) * 0.25,
+                prog_bar=False,
+                on_step=False,
+                on_epoch=True,
+            )
+            return
+
         # generator
         G_loss, G_loss_dict = self._G_step(inputs, gts)
         self.log(
@@ -218,14 +258,6 @@ class IMG2PBRGANLitModule(LightningModule):
         )
         for loss_k, loss_v in G_loss_dict.items():
             self.log(f"val/G/{loss_k}", loss_v, prog_bar=False, on_step=False, on_epoch=True)
-
-        # discriminator
-        D_loss, D_loss_dict = self._D_step(inputs, gts)
-        self.log(
-            "val/D/D_loss", D_loss.clone().detach(), prog_bar=True, on_step=False, on_epoch=True
-        )
-        for loss_k, lossv in D_loss_dict.items():
-            self.log(f"val/D/{loss_k}", loss_v, prog_bar=False, on_step=False, on_epoch=True)
 
     def on_test_start(self) -> None:
         """Lightning hook that is called when testing begins."""
@@ -326,6 +358,12 @@ class IMG2PBRGANLitModule(LightningModule):
         name, inputs, gts = batch
         inputs = inputs.to(self.device)
         preds = self(inputs)
+        # generator
+        _, disc_pixel_logits_preds = self.D(preds)
+        _, disc_pixel_logits_gts = self.D(gts)
+        # discriminator
+        disc_pixel_logits_preds = torch.tanh(disc_pixel_logits_preds)
+        disc_pixel_logits_gts = torch.tanh(disc_pixel_logits_gts)
 
         log["inputs"] = inputs
         _, C, _, _ = preds.shape
@@ -336,16 +374,26 @@ class IMG2PBRGANLitModule(LightningModule):
                 end_idx = start_idx + num
 
                 # extract each pbr map
+                # generator
                 pred = preds[:, start_idx:end_idx, ...]
                 target = gts[:, start_idx:end_idx, ...]
+                # discriminator
+                disc_pixel_logits_pred = disc_pixel_logits_preds[:, start_idx:end_idx, ...]
+                disc_pixel_logits_gt = disc_pixel_logits_gts[:, start_idx:end_idx, ...]
 
                 if pred.size(1) == 1:  # rough or metal
                     pred = pred.repeat(1, 3, 1, 1)
                     target = target.repeat(1, 3, 1, 1)
 
+                    disc_pixel_logits_pred = disc_pixel_logits_pred.repeat(1, 3, 1, 1)
+                    disc_pixel_logits_gt = disc_pixel_logits_gt.repeat(1, 3, 1, 1)
+
                 # log the pbr map
                 log[map_type[idx] + "_rec"] = pred
                 log[map_type[idx]] = target
+
+                log[map_type[idx] + "_logits_pred"] = disc_pixel_logits_pred
+                log[map_type[idx] + "_logits"] = disc_pixel_logits_gt
 
                 start_idx = end_idx
 
