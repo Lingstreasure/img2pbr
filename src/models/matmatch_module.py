@@ -5,6 +5,8 @@ from lightning import LightningModule
 from torchmetrics import MaxMetric, MeanMetric
 from torchmetrics.classification.accuracy import Accuracy
 
+from src.models.components.utils import Class_Dict, log_txt_as_img
+
 
 class MatMatchingLitModule(LightningModule):
     """Example of a `LightningModule` for material matching(aka. classification).
@@ -63,9 +65,9 @@ class MatMatchingLitModule(LightningModule):
         self.criterion = torch.nn.CrossEntropyLoss()
 
         # metric objects for calculating and averaging accuracy across batches
-        self.train_acc = Accuracy(task="multiclass", num_classes=10)
-        self.val_acc = Accuracy(task="multiclass", num_classes=10)
-        self.test_acc = Accuracy(task="multiclass", num_classes=10)
+        self.train_acc = Accuracy(task="multiclass", num_classes=self.model.num_classes)
+        self.val_acc = Accuracy(task="multiclass", num_classes=self.model.num_classes)
+        self.test_acc = Accuracy(task="multiclass", num_classes=self.model.num_classes)
 
         # for averaging loss across batches
         self.train_loss = MeanMetric()
@@ -199,3 +201,25 @@ class MatMatchingLitModule(LightningModule):
                 },
             }
         return {"optimizer": optimizer}
+
+    @torch.no_grad()
+    def log_imgs(self, batch: Tuple[str, torch.Tensor, torch.Tensor]) -> Dict[str, torch.Tensor]:
+        """The interface of ImageLogger callback for logging images.
+
+        Log model prediction images and gt images.
+        :return: A dict of images to be logged.
+        """
+        log = dict()
+        name, inputs, gts = batch
+        inputs = inputs.to(self.device)
+        preds = self.forward(inputs)
+
+        log["inputs"] = inputs
+        preds = torch.sigmoid(preds)
+        class_indexes = torch.argmax(preds, dim=1, keepdim=True).int()
+        for idx, cls in enumerate(class_indexes):
+            class_indexes[idx] = Class_Dict[cls]
+
+        log["classes_pred"] = log_txt_as_img((256, 256), class_indexes)
+        log["classes"] = log_txt_as_img((256, 256), gts)
+        return log

@@ -1,8 +1,14 @@
 import hashlib
 import os
+from typing import Sequence
 
+import numpy as np
 import requests
+import torch
+from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
+
+Class_Dict = {0: "", 1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: "", 9: ""}
 
 URL_MAP = {"vgg": "https://heibox.uni-heidelberg.de/f/607503859c864bc1b30b/?dl=1"}
 
@@ -41,3 +47,34 @@ def get_ckpt_path(name, root, check=False):
     #     md5 = md5_hash(path)
     #     assert md5 == MD5_MAP[name], md5
     return path
+
+
+def log_txt_as_img(wid_hei: Sequence[int], texts: Sequence[int], size: int = 30) -> torch.Tensor:
+    """Turn a list of texts to a image-like tensor.
+
+    :param wid_hei: The width and height of target image tensor.
+    :param texts: A sequence of texts to plot.
+    """
+
+    batch_size = len(texts)
+    txts = list()
+    num_cnt = int(40 * (wid_hei[0] / 256))
+    for b_idx in range(batch_size):
+        txt = Image.new("RGB", wid_hei, color="white")
+        draw = ImageDraw.Draw(txt)
+        font = ImageFont.truetype("data/DejaVuSans.ttf", size=size)
+        lines = "\n".join(
+            texts[b_idx][start : start + num_cnt] for start in range(0, len(texts[b_idx]), num_cnt)
+        )
+
+        try:
+            draw.text((wid_hei[0] // 4, wid_hei[0] // 4), lines, fill="black", font=font)
+        except UnicodeEncodeError:
+            print("Can't encode string for logging. Skipping.")
+
+        txt = np.array(txt).transpose(2, 0, 1) / 127.5 - 1.0  # 0-255 -> -1.-1.
+        txts.append(txt)
+
+    txts = np.stack(txts)
+    txts = torch.tensor(txts)
+    return txts
