@@ -4,13 +4,14 @@ import torch
 import torch.nn as nn
 from focal_frequency_loss import FocalFrequencyLoss as FFL
 
-from src.models.components.losses.lpips import LPIPS
+from src.models.components.losses import LPIPS, DifferentiableRenderer
 
 
 class PBRReconstructionLoss(nn.Module):
     """The PBR maps reconstruction losses module.
 
-    The loss module contain reconstruction loss, perceptual loss, render loss and GAN-based losses.
+    The loss module contain reconstruction loss, perceptual loss, focal frequency loss and render
+    loss.
     """
 
     def __init__(
@@ -49,8 +50,13 @@ class PBRReconstructionLoss(nn.Module):
             self.perceptual_loss = LPIPS(net=per_loss_net).eval()
 
         if render_loss_weight > 0.0:
-            # self.renderer = Renderer(normal_format='dx')
-            pass
+            self.renderer = DifferentiableRenderer(
+                size=30,
+                camera=[0.0, 0.0, 20.0],
+                light_color=[3000.0, 3000.0, 3000.0],
+                f0=0.04,
+                normal_format="dx",
+            )
 
         if focal_loss_weight > 0.0:
             self.ff_loss = FFL(loss_weight=1.0)
@@ -122,28 +128,24 @@ class PBRReconstructionLoss(nn.Module):
         :param pred: The predicted tensor with all pbr maps concatenated in C dimension.
         :param target: The ground truth tensor with all pbr maps concatenated in C dimension.
         """
-        B, _, H, W = target.shape
-        if self.renderer.device != target.device:
-            self.renderer.to(target.device)
-        pred_render_imgs = self.renderer.evaluate(
-            *[
-                (pred[:, :3, ...] + 1.0) / 2.0,
-                (pred[:, 3:6, ...] + 1.0) / 2.0,
-                (pred[:, 6:7, ...] + 1.0) / 2.0,
-                (pred[:, 7:, ...] + 1.0) / 2.0,
-                torch.ones((B, 1, H, W), device=target.device).float(),
-            ]
+        pred_map_list = [pred[:, start:end, ...] for (start, end) in self.map_idxes]
+        pred_rendered_imgs = self.renderer(
+            *pred_map_list,
+            normalized=False,
+            use_diffuse=True,
+            use_metallic=False,
         )
-        target_render_imgs = self.renderer.evaluate(
-            *[
-                (target[:, :3, ...] + 1.0) / 2.0,
-                (target[:, 3:6, ...] + 1.0) / 2.0,
-                (target[:, 6:7, ...] + 1.0) / 2.0,
-                (target[:, 7:, ...] + 1.0) / 2.0,
-                torch.ones((B, 1, H, W), device=target.device).float(),
-            ]
+
+        target_map_list = [target[:, start:end, ...] for (start, end) in self.map_idxes]
+        target_rendered_imgs = self.renderer(
+            *target_map_list,
+            normalized=False,
+            use_diffuse=True,
+            use_metallic=False,
         )
-        return torch.abs(pred_render_imgs.contiguous() - target_render_imgs.contiguous()).mean()
+        return torch.abs(
+            pred_rendered_imgs.contiguous() - target_rendered_imgs.contiguous()
+        ).mean()
 
     def forward(
         self, pred: torch.Tensor, target: torch.Tensor, cur_epoch: int

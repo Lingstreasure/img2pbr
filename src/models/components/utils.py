@@ -78,3 +78,31 @@ def log_txt_as_img(wid_hei: Sequence[int], texts: Sequence[int], size: int = 30)
     txts = np.stack(txts)
     txts = torch.tensor(txts)
     return txts
+
+
+def color_input_check(img: torch.Tensor, var_name: str):
+    """Verify a tensor input represents a color image.
+
+    :param img (Tensor): Source tensor input.
+    :param var_name (str): Argument name of the tensor.
+    :return: raise ValueError - The input tensor does not represent a color image.
+    """
+    if not isinstance(img, torch.Tensor) or img.ndim != 4 or img.shape[1] not in (3, 4):
+        raise ValueError(
+            f"Node function input '{var_name}' must be a color image but have "
+            f"{img.shape[1]} channels"
+        )
+
+
+def grayscale_input_check(img: torch.Tensor, var_name: str):
+    """Verify a tensor input represents a grayscale image.
+
+    :param img (Tensor): Source tensor input.
+    :param var_name (str): Argument name of the tensor.
+    :return: raise ValueError - The input tensor does not represent a grayscale image.
+    """
+    if not isinstance(img, torch.Tensor) or img.ndim != 4 or img.shape[1] != 1:
+        raise ValueError(
+            f"Node function input '{var_name}' must be a grayscale image but "
+            f"have {img.shape[1]} channels"
+        )
