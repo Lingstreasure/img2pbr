@@ -1,5 +1,5 @@
 _target_: src.models.img2pbr_gan_module.IMG2PBRGANLitModule
-adv_loss_weight: 0.2
+adv_loss_weight: 0.02
 generator:
   _target_: src.models.components.unet_multi_decoder.UNetMultiDecoderModel
   in_channels: 3
@@ -41,10 +41,10 @@ loss_G:
   pbr_ch_nums: [3, 3, 1] #, 1]
   per_loss_after_num_epochs: -1
   per_loss_net: alex
-  random_per_loss_weight: 0.
+  random_per_loss_weight: 0.2 # 0.2
   focal_loss_weight: 0.
   per_loss_weight: 0.
-  render_loss_weight: 0. # not implementation
+  render_loss_weight: 2.
 
 loss_D:
   _target_: torch.nn.BCEWithLogitsLoss
@@ -60,18 +60,19 @@ optimizer_D:
   _partial_: True
   lr: 5.e-3
   weight_decay: 0.
-# scheduler_G:
-#   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
-#   _partial_: True
-#   mode: min
-#   min_lr: 1.e-4
-#   factor: 0.5
-#   patience: 10
 
-# scheduler_D:
-#   _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
-#   _partial_: True
-#   mode: min
-#   min_lr: 1.e-4
-#   factor: 0.5
-#   patience: 10
+scheduler_G:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: True
+  mode: min
+  min_lr: 2.e-4
+  factor: 0.5
+  patience: 5
+
+scheduler_D:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: True
+  mode: min
+  min_lr: 1.e-3
+  factor: 0.5
+  patience: 5
