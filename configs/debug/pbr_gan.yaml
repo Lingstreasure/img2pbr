@@ -1,0 +1,70 @@
+# @package _global_
+
+# default debugging setup, runs 1 full epoch
+# other debugging configs can inherit from this one
+
+defaults:
+  - override /data: pbr
+  - override /model: pbr_gan
+  - override /trainer: pbr
+
+# overwrite task name so debugging logs are stored in separate folder
+task_name: "debug"
+
+# disable callbacks and loggers during debugging
+callbacks: null
+logger: null
+
+extras:
+  ignore_warnings: False
+  enforce_tags: False
+
+# sets level of all command line loggers to 'DEBUG'
+# https://hydra.cc/docs/tutorials/basic/running_your_app/logging/
+hydra:
+  job_logging:
+    root:
+      level: DEBUG
+
+  # use this to also set hydra loggers to 'DEBUG'
+  # verbose: True
+
+trainer:
+  max_epochs: 1
+  accelerator: cpu # debuggers don't like gpus
+  devices: 1 # debuggers don't like multiprocessing
+  detect_anomaly: true # raise exception if NaN or +/-inf is detected in any tensor
+
+data:
+  batch_size: 8
+  num_workers: 0 # debuggers don't like multiprocessing
+  pin_memory: False # disable gpu memory pin
+
+model:
+  num_epoch_G_on: -1 # `-1` means training G and D from the beginning
+
+  optimizer_G:
+    lr: 5.e-4
+
+  optimizer_D:
+    lr: 5.e-3
+
+  generator:
+    num_conv_blocks: 1
+    channel_mult: [1, 1, 1, 1]
+    use_batch_norm: False # use this will forbidden group norm
+    use_self_attention: False
+    use_ViT_bottleneck: False
+    use_interpolation: False
+    use_MLP_out: False
+    use_fp16: False
+
+  discriminator:
+    num_conv_blocks: 1
+    channel_mult: [1, 1, 1, 1]
+    use_batch_norm: False # use this will forbidden group norm
+    use_self_attention: False
+    use_ViT_bottleneck: False
+    use_interpolation: False
+    use_MLP_out: False
+    use_fp16: False
