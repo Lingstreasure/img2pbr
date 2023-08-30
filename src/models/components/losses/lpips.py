@@ -198,5 +198,5 @@ class LPIPS(nn.Module):
         ]
         val = res[0]
         for idx in range(1, len(self.chns)):
-            val += res[idx]
+            val = val + res[idx]
         return val

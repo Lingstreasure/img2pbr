@@ -23,7 +23,7 @@ def norm(vec: torch.Tensor, dim: int = 0, eps: float = 1.0e-12) -> torch.Tensor:
     :param dim: Along which dimension to do norm operation. Default to `0`.
     :param eps: Prevent to divide by zero. Default to `1.e-12`.
     """
-    return vec / (torch.linalg.norm(vec, dim=dim, keepdim=True) + eps)
+    return vec / (torch.linalg.norm(vec, dim=dim, keepdim=True)).clamp_min(eps)
 
 
 def getDir(pos: torch.Tensor, tex_pos: torch.Tensor) -> torch.Tensor:
@@ -100,7 +100,9 @@ class DifferentiableRenderer(nn.Module):
             ),
         )  # 5 positions around center point
 
-    def DistributionGGX(self, n_dot_h: torch.Tensor, alpha: torch.Tensor) -> torch.Tensor:
+    def DistributionGGX(
+        self, n_dot_h: torch.Tensor, alpha: torch.Tensor, eps: float = 1.0e-12
+    ) -> torch.Tensor:
         """A GGX normal distribution function term.
 
         :param cos: The vector of normal * half vector.
@@ -109,7 +111,7 @@ class DifferentiableRenderer(nn.Module):
         n_dot_h2 = n_dot_h**2
         a2 = alpha**2
         denom = (n_dot_h2 * (a2 - 1.0) + 1.0) ** 2 * torch.pi
-        return a2 / (denom + 1e-12)
+        return a2 / (denom + eps)
 
     def Fresnel(self, v_dot_h: torch.Tensor, f0: torch.Tensor) -> torch.Tensor:
         """A Fresnel-Schlick approximation term."""
@@ -171,7 +173,7 @@ class DifferentiableRenderer(nn.Module):
 
         # Process DirectX normal format by default
         if self.normal_format == "dx":
-            normal.select(1, 1).neg_()
+            normal = normal * torch.tensor([1, -1, 1], device=normal.device).view(1, 3, 1, 1)
 
         # Account for metallicity - increase base reflectivity and decrease albedo
         f0 = self.f0
@@ -215,12 +217,14 @@ class DifferentiableRenderer(nn.Module):
         # Get the specular term with cook-torrance brdf
         specular = D * F * G / (4 * n_dot_v * n_dot_l).clamp_min(eps)
 
-        rendering = torch.clamp(specular * geometry_times_light, 0.0, 1.0)
+        rendering = torch.clamp(specular * geometry_times_light, eps, 1.0)  # eps: prevent nan
 
         # Whether use diffuse term
         if use_diffuse:
-            rendering = torch.clamp(rendering + diffuse * geometry_times_light, eps, 1.0)
+            rendering = torch.clamp(
+                rendering + diffuse * geometry_times_light, eps, 1.0
+            )  # eps: prevent nan
 
         # De-gamma
-        rendering = rendering ** (1 / 2.2)
+        rendering = rendering ** (1 / 2.2)  # prevent rendering to be zero
         return rendering

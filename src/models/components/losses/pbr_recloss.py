@@ -132,7 +132,7 @@ class PBRReconstructionLoss(nn.Module):
         pred_rendered_imgs = self.renderer(
             *pred_map_list,
             normalized=False,
-            use_diffuse=True,
+            use_diffuse=False,
             use_metallic=False,
         )
 
@@ -140,7 +140,7 @@ class PBRReconstructionLoss(nn.Module):
         target_rendered_imgs = self.renderer(
             *target_map_list,
             normalized=False,
-            use_diffuse=True,
+            use_diffuse=False,
             use_metallic=False,
         )
         return torch.abs(
