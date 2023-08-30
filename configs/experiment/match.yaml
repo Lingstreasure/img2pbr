@@ -1,0 +1,32 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /data: match
+  - override /model: match
+  - override /callbacks: match
+  - override /trainer: match
+  - override /logger: tensorboard
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+task_name: "mat_classification/train"
+tags: ["D5+SU", "efficientnet"]
+
+seed: 12345
+
+trainer:
+  min_epochs: 10
+  max_epochs: 50
+  # gradient_clip_val: 0.5
+
+model:
+  optimizer:
+    lr: 0.001
+
+data:
+  batch_size: 64
+  num_workers: 4

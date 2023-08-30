@@ -1,0 +1,18 @@
+_target_: src.models.matmatch_module.MatMatchingLitModule
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 0.001
+  weight_decay: 0.0
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  mode: min
+  factor: 0.5
+  patience: 5
+
+model:
+  _target_: src.models.components.efficient_net.EfficientNetModel
+  num_classes: 16

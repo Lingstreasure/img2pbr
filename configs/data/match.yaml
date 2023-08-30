@@ -1,0 +1,28 @@
+_target_: src.data.mat_datamodule.MatMatchingDataModule
+batch_size: 32
+num_workers: 2
+pin_memory: True
+
+data_train:
+  _target_: src.data.components.mat_dataset.MatMatchingDataset
+  _partial_: True
+  data_root_dir: /media/d5/7D1922F98D178B12/hz/DataSet/ai_mat
+  data_list_file_dir: /media/d5/7D1922F98D178B12/hz/DataSet/ai_mat
+  subdataset_names: ["SU_mat", "D5_mat"]
+  class_def_json_path: /media/d5/7D1922F98D178B12/hz/DataSet/ai_mat/mat_class.json
+  list_file_prefix: classify
+  mode: train
+  debug_on: False
+  debug_data_num: 200
+
+data_val:
+  _target_: src.data.components.mat_dataset.MatMatchingDataset
+  _partial_: True
+  data_root_dir: /media/d5/7D1922F98D178B12/hz/DataSet/ai_mat
+  data_list_file_dir: /media/d5/7D1922F98D178B12/hz/DataSet/ai_mat
+  subdataset_names: ["SU_mat", "D5_mat"]
+  class_def_json_path: /media/d5/7D1922F98D178B12/hz/DataSet/ai_mat/mat_class.json
+  list_file_prefix: classify
+  mode: test
+  debug_on: False
+  debug_data_num: 200
